@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+﻿import { useState, useRef, useCallback, useEffect } from "react";
 import ExcelJS from "exceljs";
 
-const PEOPLE = ["Pasquale", "Antonio", "Francesco"];
+const PEOPLE = ["Socio 1", "Socio 2", "Socio 3"];
 const PERSON_COLORS = {
-  Pasquale:  { bg: "#DBEAFE", text: "#1D4ED8", border: "#BFDBFE" },
-  Antonio:   { bg: "#D1FAE5", text: "#065F46", border: "#A7F3D0" },
-  Francesco: { bg: "#EDE9FE", text: "#5B21B6", border: "#DDD6FE" },
+  "Socio 1":  { bg: "#DBEAFE", text: "#1D4ED8", border: "#BFDBFE" },
+  "Socio 2":   { bg: "#D1FAE5", text: "#065F46", border: "#A7F3D0" },
+  "Socio 3": { bg: "#EDE9FE", text: "#5B21B6", border: "#DDD6FE" },
 };
 const MONTHS = ["Tutti","Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
 
@@ -140,7 +140,7 @@ export default function App() {
   const [toast, setToast]                 = useState(null);
   const [dragging, setDragging]           = useState(false);
   const [editForm, setEditForm]           = useState(null);
-  const [persona, setPersona]             = useState("Pasquale");
+  const [persona, setPersona]             = useState("Socio 1");
   const [qrUrl, setQrUrl]                 = useState("");
   const [filterMonth, setFilterMonth]     = useState(0);
   const [editingId, setEditingId]         = useState(null);
