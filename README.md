@@ -1,6 +1,6 @@
 <div align="center">
   <h1>📄 PaperTrail</h1>
-  <p><strong>AI-powered expense management — photograph a receipt, get structured data instantly</strong></p>
+  <p><strong>AI-powered expense report tool — photograph a receipt, get structured data instantly</strong></p>
   <p>
     <img alt="Status" src="https://img.shields.io/badge/status-production-brightgreen?style=flat-square">
     <img alt="Stack" src="https://img.shields.io/badge/stack-React%20%7C%20Claude%20Vision%20%7C%20Vercel-blue?style=flat-square">
@@ -10,22 +10,39 @@
 
 ---
 
+> **Note:** This is a bespoke tool commissioned by and built exclusively for a specific company. It is not a general-purpose SaaS product — it is tailored to that company's exact workflow and is currently in daily production use. A generalized, multi-tenant version is planned for future development.
+
 ## What is PaperTrail?
 
-PaperTrail is an AI expense management tool commissioned by and **in daily use at a real company**.
+PaperTrail is an AI expense management tool built for a construction company to eliminate the manual process of compiling annual expense reports from receipts.
 
-Employees photograph receipts on mobile → Claude Vision API extracts structured data automatically (date, vendor, amount, fiscal number) → one-click export to formatted Excel and PDF.
+Previously, business partners had to manually transcribe data from dozens of paper receipts into an Excel spreadsheet at the end of the year — date, vendor, amount, fiscal number, one by one. PaperTrail replaces that entirely.
 
-No more manual data entry. No more lost receipts.
+They photograph the receipts → Claude Vision API extracts all structured data automatically → one-click export to a formatted Excel file ready for the accountant.
+
+## How it works
+
+```
+Partner photographs receipt (mobile or desktop)
+        ↓
+Claude Vision API extracts structured data
+(date, vendor, amount, fiscal number)
+        ↓
+Human review & confirmation screen
+        ↓
+Expense saved to session log
+        ↓
+Export → formatted Excel (one click)
+```
 
 ## Features
 
-- **AI receipt scanning** — Claude Vision extracts date, vendor, amount, fiscal number from any photo
-- **Human-in-the-loop review** — verify extracted data before confirming
-- **Per-employee assignment** — track expenses by team member
-- **One-click export** — formatted Excel (ExcelJS) and PDF output
-- **Mobile-first** — designed for photographing receipts in the field
-- **Secure deployment** — serverless API proxy on Vercel, password-protected access
+- **AI receipt scanning** — Claude Vision extracts date, vendor, amount, and fiscal number from any receipt photo
+- **Human-in-the-loop review** — extracted data is shown for confirmation before saving
+- **Session-based expense log** — accumulate multiple receipts in a single session
+- **One-click Excel export** — formatted output via ExcelJS, ready for accounting
+- **Secure API proxy** — API key never exposed to the client; routed through a serverless Vercel function
+- **Password-protected access** — single-company deployment, access restricted
 
 ## Tech Stack
 
@@ -34,22 +51,8 @@ No more manual data entry. No more lost receipts.
 | Frontend | React 18, Vite |
 | AI | Claude Vision API (Anthropic) |
 | Export | ExcelJS |
-| Backend | Node.js serverless (Vercel) |
+| Backend | Node.js serverless (Vercel Functions) |
 | Deploy | Vercel |
-
-## How it works
-
-```
-Employee photographs receipt (mobile)
-        ↓
-Claude Vision API extracts structured data
-        ↓
-Human review & confirmation screen
-        ↓
-Assigned to employee, saved to session
-        ↓
-Export → Excel / PDF (one click)
-```
 
 ## Local Development
 
@@ -61,7 +64,7 @@ cd papertrail
 # Install dependencies
 npm install
 
-# Add your API key
+# Add your Anthropic API key
 echo "VITE_ANTHROPIC_API_KEY=your_key_here" > .env.local
 
 # Start dev server
@@ -73,18 +76,23 @@ npm run dev
 ```
 papertrail/
 ├── api/
-│   └── proxy.js          # Serverless API proxy (hides API key)
+│   └── proxy.js          # Serverless API proxy (keeps API key server-side)
 ├── src/
-│   ├── App.jsx           # Main application component
-│   └── ...
+│   └── App.jsx           # Main application component
 ├── public/
 ├── vercel.json           # Vercel routing config
 └── vite.config.js
 ```
 
-## Context
+## Roadmap
 
-Built as a freelance commission for a construction company to replace their manual expense tracking process. The core insight: workers on job sites don't have time for spreadsheets — they need to photograph and move on.
+The current version is a single-company deployment. Planned future development:
+
+- Multi-company / multi-user authentication
+- Per-user expense tracking and assignment
+- PDF export alongside Excel
+- Cloud storage for receipt images
+- Category tagging and budget tracking
 
 ---
 
