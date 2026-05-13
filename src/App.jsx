@@ -1,6 +1,5 @@
 ﻿import { useState, useRef, useCallback, useEffect } from "react";
 import ExcelJS from "exceljs";
-import heic2any from "heic2any";
 
 const PEOPLE = ["Socio 1", "Socio 2", "Socio 3"];
 const PERSON_COLORS = {
@@ -28,11 +27,40 @@ function isHeic(file) {
     file.type === "image/heic" || file.type === "image/heif";
 }
 
+async function heicToJpeg(file) {
+  // Try native browser HEIC decoding via createImageBitmap + canvas
+  if (typeof createImageBitmap !== "undefined") {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width; canvas.height = bitmap.height;
+      canvas.getContext("2d").drawImage(bitmap, 0, 0);
+      bitmap.close();
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.9));
+      return new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" });
+    } catch {
+      // fall through to URL approach
+    }
+  }
+  // Fallback: load via object URL (works if OS has HEIC codec registered)
+  const url = URL.createObjectURL(file);
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("HEIC non supportato da questo browser. Converti il file in JPEG prima di caricarlo.")); };
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => res(new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" })), "image/jpeg", 0.9);
+    };
+    img.src = url;
+  });
+}
+
 async function compressImage(file) {
   if (isHeic(file)) {
-    const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
-    const converted = Array.isArray(blob) ? blob[0] : blob;
-    file = new File([converted], file.name.replace(/\.heic$/i, ".jpg").replace(/\.heif$/i, ".jpg"), { type: "image/jpeg" });
+    file = await heicToJpeg(file);
   }
   return new Promise((res, rej) => {
     const reader = new FileReader();
