@@ -1,5 +1,6 @@
 ﻿import { useState, useRef, useCallback, useEffect } from "react";
 import ExcelJS from "exceljs";
+import heic2any from "heic2any";
 
 const PEOPLE = ["Socio 1", "Socio 2", "Socio 3"];
 const PERSON_COLORS = {
@@ -21,7 +22,18 @@ function fileFingerprint(file) {
   return `${file.name}_${file.size}_${file.lastModified}`;
 }
 
-function compressImage(file) {
+function isHeic(file) {
+  const name = file.name.toLowerCase();
+  return name.endsWith(".heic") || name.endsWith(".heif") ||
+    file.type === "image/heic" || file.type === "image/heif";
+}
+
+async function compressImage(file) {
+  if (isHeic(file)) {
+    const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+    const converted = Array.isArray(blob) ? blob[0] : blob;
+    file = new File([converted], file.name.replace(/\.heic$/i, ".jpg").replace(/\.heif$/i, ".jpg"), { type: "image/jpeg" });
+  }
   return new Promise((res, rej) => {
     const reader = new FileReader();
     reader.onerror = rej;
@@ -263,7 +275,7 @@ export default function App() {
   }, [persona]);
 
   const addFiles = (files) => {
-    const valid = Array.from(files).filter(f => f.type.startsWith("image/"));
+    const valid = Array.from(files).filter(f => f.type.startsWith("image/") || isHeic(f));
     if (!valid.length) { showToast("Nessuna immagine valida", "err"); return; }
     const duplicates = valid.filter(f => processedHashes.includes(fileFingerprint(f)));
     if (duplicates.length > 0) {
