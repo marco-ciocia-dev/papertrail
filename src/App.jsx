@@ -273,9 +273,11 @@ export default function App() {
     setQueue(items.map(it => ({ name: it.name, status: "waiting" })));
     const allExtracted = [];
     let firstError = null;
-    for (let i = 0; i < items.length; i++) {
+    let doneCount = 0;
+
+    const CONCURRENCY = 4;
+    const processItem = async (i) => {
       const item = items[i];
-      setCurrentFile({ name: item.name, idx: i + 1, total: items.length });
       setQueue(prev => prev.map((q, qi) => qi === i ? { ...q, status: "processing" } : q));
       try {
         const { b64, mediaType, previewUrl } = await item.getBase64();
@@ -290,7 +292,16 @@ export default function App() {
         if (!firstError) firstError = err.message;
         setQueue(prev => prev.map((q, qi) => qi === i ? { ...q, status: "error", note: err.message.slice(0, 80) } : q));
       }
-    }
+      doneCount++;
+      setCurrentFile({ idx: doneCount, total: items.length });
+    };
+
+    // Run up to CONCURRENCY items at a time
+    const indices = Array.from({ length: items.length }, (_, i) => i);
+    const chunks = [];
+    for (let i = 0; i < indices.length; i += CONCURRENCY) chunks.push(indices.slice(i, i + CONCURRENCY));
+    for (const chunk of chunks) await Promise.all(chunk.map(processItem));
+
     processingRef.current = false; setCurrentFile(null);
     if (allExtracted.length > 0) {
       setPendingReview(allExtracted.map((s, i) => ({ id: i, data: s.data || "", numFisc: s.numFisc || "", ristorante: s.ristorante || "", importo: String(s.importo || ""), persona: s.persona, preview: s.preview, fileName: s.fileName })));
