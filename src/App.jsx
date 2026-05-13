@@ -568,8 +568,8 @@ export default function App() {
             <div style={{ background: th.card, borderRadius: 12, padding: 20, marginBottom: 18, border: `1px solid ${th.border}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#F59E0B", textTransform: "uppercase", letterSpacing: "0.07em" }}>✦ Revisione {reviewIdx + 1} di {pendingReview.length}</div>
-                <div style={{ display: "flex", gap: 5 }}>
-                  {pendingReview.map((_, i) => (<div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i < reviewIdx ? "#22C55E" : i === reviewIdx ? "#F59E0B" : th.border }} />))}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: pendingReview.length > 60 ? 3 : 5, maxWidth: 420, justifyContent: "flex-end" }}>
+                  {pendingReview.map((_, i) => (<div key={i} style={{ width: pendingReview.length > 60 ? 6 : 8, height: pendingReview.length > 60 ? 6 : 8, borderRadius: "50%", background: i < reviewIdx ? "#22C55E" : i === reviewIdx ? "#F59E0B" : th.border, flexShrink: 0 }} />))}
                 </div>
               </div>
               <div style={{ fontSize: 11, color: th.sub, marginBottom: 12, fontStyle: "italic" }}>{current.fileName}</div>
