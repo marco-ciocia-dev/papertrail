@@ -252,6 +252,7 @@ export default function App() {
     setStep("processing");
     setQueue(items.map(it => ({ name: it.name, status: "waiting" })));
     const allExtracted = [];
+    let firstError = null;
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       setCurrentFile({ name: item.name, idx: i + 1, total: items.length });
@@ -266,6 +267,7 @@ export default function App() {
           setQueue(prev => prev.map((q, qi) => qi === i ? { ...q, status: "done", count: scontrini.length } : q));
         }
       } catch (err) {
+        if (!firstError) firstError = err.message;
         setQueue(prev => prev.map((q, qi) => qi === i ? { ...q, status: "error", note: err.message.slice(0, 80) } : q));
       }
     }
@@ -273,7 +275,10 @@ export default function App() {
     if (allExtracted.length > 0) {
       setPendingReview(allExtracted.map((s, i) => ({ id: i, data: s.data || "", numFisc: s.numFisc || "", ristorante: s.ristorante || "", importo: String(s.importo || ""), persona: s.persona, preview: s.preview, fileName: s.fileName })));
       setReviewIdx(0); setEditForm(null); setStep("review");
-    } else { showToast("Nessuno scontrino estratto", "err"); setStep("idle"); }
+    } else {
+      const msg = firstError ? `Errore: ${firstError.slice(0, 120)}` : "Nessuno scontrino estratto";
+      showToast(msg, "err"); setStep("idle");
+    }
   }, [persona]);
 
   const addFiles = (files) => {
