@@ -377,40 +377,51 @@ export default function App() {
       const buffer = await file.arrayBuffer();
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.load(buffer);
-      const MONTH_MAP = { gen:1,feb:2,mar:3,apr:4,mag:5,giu:6,lug:7,ago:8,set:9,ott:10,nov:11,dic:12 };
+      const MONTH_MAP = { gen:1,feb:2,mar:3,apr:4,mag:5,giu:6,lug:7,ago:8,set:9,ott:10,nov:11,dic:12,jan:1,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,dec:12 };
+      const parseXlsxDate = (v) => {
+        if (!v) return "";
+        if (v instanceof Date) {
+          return `${String(v.getDate()).padStart(2,"0")}/${String(v.getMonth()+1).padStart(2,"0")}`;
+        }
+        const s = String(v);
+        const parts = s.split(/[-\/]/);
+        if (parts.length === 2) {
+          const monStr = parts[1].toLowerCase().trim();
+          const mon = MONTH_MAP[monStr] || parseInt(monStr);
+          if (mon >= 1 && mon <= 12) return `${String(parseInt(parts[0])).padStart(2,"0")}/${String(mon).padStart(2,"0")}`;
+        }
+        return "";
+      };
+      const parseImporto = (v) => {
+        if (typeof v === "number") return v;
+        if (v && typeof v === "object" && typeof v.result === "number") return v.result;
+        if (!v) return NaN;
+        return parseFloat(String(v).replace(/[€$£\s]/g, "").replace(",", "."));
+      };
       const newEntries = [];
-      wb.eachSheet(ws => {
-        const persona = ws.name;
-        if (!PEOPLE.includes(persona)) return;
-        ws.eachRow((row, rowNum) => {
-          if (rowNum === 1) return;
+      wb.worksheets.forEach(ws => {
+        const persona = PEOPLE.find(p => p.toLowerCase() === ws.name.toLowerCase().trim()) || null;
+        if (!persona) return;
+        ws.eachRow({ includeEmpty: false }, (row) => {
           const v1 = row.getCell(1).value;
           const v2 = row.getCell(2).value;
           const v3 = row.getCell(3).value;
           const v4 = row.getCell(4).value;
-          if (!v1 || !v3 || !v4) return;
-          if (String(v3).toUpperCase().trim() === "TOTALE") return;
-          if (String(v1).toUpperCase().trim() === "DATA") return;
-          let data = "";
-          if (v1 instanceof Date) {
-            const d = String(v1.getDate()).padStart(2, "0");
-            const m = String(v1.getMonth() + 1).padStart(2, "0");
-            data = `${d}/${m}`;
-          } else {
-            const parts = String(v1).split("-");
-            if (parts.length === 2) {
-              const mon = MONTH_MAP[parts[1].toLowerCase().trim()];
-              if (mon) data = `${String(parts[0]).padStart(2,"0")}/${String(mon).padStart(2,"0")}`;
-            }
-          }
+          if (String(v1 ?? "").toUpperCase().trim() === "DATA") return;
+          if (String(v3 ?? "").toUpperCase().trim() === "TOTALE") return;
+          const data = parseXlsxDate(v1);
           const numFisc = v2 ? String(v2) : "";
-          const ristorante = String(v3);
-          const importo = typeof v4 === "number" ? v4 : parseFloat(String(v4).replace(/[€\s]/g, "").replace(",", "."));
+          const ristorante = v3 ? String(v3) : "";
+          const importo = parseImporto(v4);
           if (!data || !ristorante || isNaN(importo) || importo <= 0) return;
           newEntries.push({ id: Date.now() + Math.random(), data, numFisc, ristorante, importo, persona, preview: null });
         });
       });
-      if (!newEntries.length) { showToast("Nessun dato trovato nel file", "err"); return; }
+      if (!newEntries.length) {
+        const sheetNames = wb.worksheets.map(ws => `"${ws.name}"`).join(", ");
+        showToast(`Nessun dato trovato — fogli: ${sheetNames || "nessuno"}`, "err");
+        return;
+      }
       setEntries(prev => [...prev, ...newEntries]);
       showToast(`✓ Importati ${newEntries.length} scontrini da ${file.name}`);
     } catch (err) {
