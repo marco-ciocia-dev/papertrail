@@ -185,6 +185,7 @@ export default function App() {
 
   const fileRef       = useRef();
   const folderRef     = useRef();
+  const importXlsxRef = useRef();
   const processingRef = useRef(false);
 
   // Theme colors
@@ -371,6 +372,69 @@ export default function App() {
     setEntries([]); setProcessedHashes([]); showToast("Dati eliminati");
   };
 
+  const importXLSX = async (file) => {
+    try {
+      const buffer = await file.arrayBuffer();
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(buffer);
+      const MONTH_MAP = { gen:1,feb:2,mar:3,apr:4,mag:5,giu:6,lug:7,ago:8,set:9,ott:10,nov:11,dic:12 };
+      const newEntries = [];
+      wb.eachSheet(ws => {
+        const persona = ws.name;
+        if (!PEOPLE.includes(persona)) return;
+        ws.eachRow((row, rowNum) => {
+          if (rowNum === 1) return;
+          const v1 = row.getCell(1).value;
+          const v2 = row.getCell(2).value;
+          const v3 = row.getCell(3).value;
+          const v4 = row.getCell(4).value;
+          if (!v1 || !v3 || !v4) return;
+          if (String(v3).toUpperCase().trim() === "TOTALE") return;
+          if (String(v1).toUpperCase().trim() === "DATA") return;
+          let data = "";
+          if (v1 instanceof Date) {
+            const d = String(v1.getDate()).padStart(2, "0");
+            const m = String(v1.getMonth() + 1).padStart(2, "0");
+            data = `${d}/${m}`;
+          } else {
+            const parts = String(v1).split("-");
+            if (parts.length === 2) {
+              const mon = MONTH_MAP[parts[1].toLowerCase().trim()];
+              if (mon) data = `${String(parts[0]).padStart(2,"0")}/${String(mon).padStart(2,"0")}`;
+            }
+          }
+          const numFisc = v2 ? String(v2) : "";
+          const ristorante = String(v3);
+          const importo = typeof v4 === "number" ? v4 : parseFloat(String(v4).replace(/[€\s]/g, "").replace(",", "."));
+          if (!data || !ristorante || isNaN(importo) || importo <= 0) return;
+          newEntries.push({ id: Date.now() + Math.random(), data, numFisc, ristorante, importo, persona, preview: null });
+        });
+      });
+      if (!newEntries.length) { showToast("Nessun dato trovato nel file", "err"); return; }
+      setEntries(prev => [...prev, ...newEntries]);
+      showToast(`✓ Importati ${newEntries.length} scontrini da ${file.name}`);
+    } catch (err) {
+      showToast("Errore importazione: " + err.message.slice(0, 80), "err");
+    }
+  };
+
+  const balanceExpenses = () => {
+    if (!entries.length) return;
+    const totalsMap = Object.fromEntries(PEOPLE.map(p => [p, 0]));
+    const sorted = [...entries].sort((a, b) => b.importo - a.importo);
+    const assignments = {};
+    for (const entry of sorted) {
+      const minPerson = PEOPLE.reduce((min, p) => totalsMap[p] < totalsMap[min] ? p : min, PEOPLE[0]);
+      assignments[entry.id] = minPerson;
+      totalsMap[minPerson] += entry.importo;
+    }
+    const balanced = entries.map(e => ({ ...e, persona: assignments[e.id] }));
+    const changed = balanced.filter((e, i) => e.persona !== entries[i].persona).length;
+    setEntries(balanced);
+    const perPerson = PEOPLE.map(p => `${p}: €${totalsMap[p].toFixed(2)}`).join(" · ");
+    showToast(`⚖️ ${changed} riassegnati — ${perPerson}`);
+  };
+
   const totals = PEOPLE.map(p => ({ name: p, count: filteredEntries.filter(e => e.persona === p).length, total: filteredEntries.filter(e => e.persona === p).reduce((s, e) => s + e.importo, 0) }));
   const grand = filteredEntries.reduce((s, e) => s + e.importo, 0);
   const statusColor = { waiting: "#94A3B8", processing: "#F59E0B", done: "#22C55E", error: "#EF4444", skip: "#94A3B8" };
@@ -471,10 +535,12 @@ export default function App() {
             <div style={{ color: "#94A3B8", fontSize: 12, marginTop: 1 }}>Expense tracking · AI</div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input ref={importXlsxRef} type="file" accept=".xlsx" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) { importXLSX(e.target.files[0]); e.target.value = ""; } }} />
             <button onClick={toggleDark} title={dark ? "Modalità chiara" : "Modalità scura"}
               style={{ background: "none", border: "1px solid #334155", color: dark ? "#F59E0B" : "#94A3B8", padding: "6px 10px", borderRadius: 7, fontSize: 16, cursor: "pointer" }}>
               {dark ? "☀️" : "🌙"}
             </button>
+            <button onClick={() => importXlsxRef.current.click()} style={{ background: "#1D4ED8", color: "#fff", border: "none", padding: "8px 14px", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>📂 Importa .xlsx</button>
             {entries.length > 0 && <>
               <button onClick={() => setShowPreview(true)} style={{ background: "#334155", color: "#CBD5E1", border: "none", padding: "8px 14px", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>👁 Anteprima</button>
               <button onClick={exportPDF} style={{ background: "#7C3AED", color: "#fff", border: "none", padding: "8px 14px", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>📄 PDF</button>
@@ -674,6 +740,7 @@ export default function App() {
               <button onClick={() => setShowPreview(true)} style={{ background: "#334155", color: "#fff", border: "none", padding: "13px 24px", borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>👁 Anteprima</button>
               <button onClick={exportPDF} style={{ background: "#7C3AED", color: "#fff", border: "none", padding: "13px 24px", borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>📄 Esporta PDF</button>
               <button onClick={exportXLSX} style={{ background: "#22C55E", color: "#fff", border: "none", padding: "13px 36px", borderRadius: 9, fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 14px rgba(34,197,94,0.3)" }}>⬇ Esporta SCONTRINI_2025.xlsx</button>
+              <button onClick={balanceExpenses} style={{ background: "#0EA5E9", color: "#fff", border: "none", padding: "13px 24px", borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>⚖️ Bilancia spese</button>
               <button onClick={clearAll} style={{ background: "none", color: "#EF4444", border: "1px solid #FECACA", padding: "13px 18px", borderRadius: 9, fontSize: 13, cursor: "pointer" }}>🗑 Svuota tutto</button>
             </div>
           )}
