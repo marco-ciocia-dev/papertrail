@@ -180,7 +180,9 @@ export default function App() {
     filterActive: "#FEF3C7", dropzone: "#fff",
   };
 
-  useEffect(() => { localStorage.setItem("scontrini_entries", JSON.stringify(entries)); }, [entries]);
+  useEffect(() => {
+    localStorage.setItem("scontrini_entries", JSON.stringify(entries.map(({ preview, ...rest }) => rest)));
+  }, [entries]);
   useEffect(() => { localStorage.setItem("scontrini_hashes", JSON.stringify(processedHashes)); }, [processedHashes]);
   useEffect(() => {
     setQrUrl(`https://quickchart.io/qr?text=${encodeURIComponent(window.location.href)}&size=160&margin=2`);
