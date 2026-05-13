@@ -28,34 +28,23 @@ function isHeic(file) {
 }
 
 async function heicToJpeg(file) {
-  // Try native browser HEIC decoding via createImageBitmap + canvas
-  if (typeof createImageBitmap !== "undefined") {
-    try {
-      const bitmap = await createImageBitmap(file);
-      const canvas = document.createElement("canvas");
-      canvas.width = bitmap.width; canvas.height = bitmap.height;
-      canvas.getContext("2d").drawImage(bitmap, 0, 0);
-      bitmap.close();
-      const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.9));
-      return new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" });
-    } catch {
-      // fall through to URL approach
-    }
-  }
-  // Fallback: load via object URL (works if OS has HEIC codec registered)
-  const url = URL.createObjectURL(file);
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("HEIC non supportato da questo browser. Converti il file in JPEG prima di caricarlo.")); };
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-      canvas.getContext("2d").drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
-      canvas.toBlob((blob) => res(new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" })), "image/jpeg", 0.9);
-    };
-    img.src = url;
+  // Server-side conversion: send raw HEIC base64 to /api/heic-convert
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  const resp = await fetch("/api/heic-convert", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ heicBase64: base64 }),
   });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error || `Conversione HEIC fallita (${resp.status})`);
+  }
+  const { jpegBase64 } = await resp.json();
+  const byteChars = atob(jpegBase64);
+  const byteArr = new Uint8Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+  return new File([byteArr], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" });
 }
 
 async function compressImage(file) {
