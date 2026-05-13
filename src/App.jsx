@@ -275,7 +275,7 @@ export default function App() {
     let firstError = null;
     let doneCount = 0;
 
-    const CONCURRENCY = 4;
+    const CONCURRENCY = 6;
     const processItem = async (i) => {
       const item = items[i];
       setQueue(prev => prev.map((q, qi) => qi === i ? { ...q, status: "processing" } : q));
