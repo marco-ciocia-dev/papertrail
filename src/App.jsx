@@ -30,7 +30,10 @@ function isHeic(file) {
 async function heicToJpeg(file) {
   // Server-side conversion: send raw HEIC base64 to /api/heic-convert
   const arrayBuffer = await file.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  const base64 = btoa(binary);
   const resp = await fetch("/api/heic-convert", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
